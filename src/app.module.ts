@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RedisModule } from 'redis.module';
+import { WebhookModule } from '../src/modules/webhooks/webhook.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { RedisModule } from 'redis.module';
       })
 
     }),
+    WebhookModule,
   ],
   controllers: [AppController],
   providers: [AppService],
