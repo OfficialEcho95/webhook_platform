@@ -5,6 +5,7 @@ import { RedisServer } from 'redisServer';
 import { spawn } from 'child_process';
 import * as net from 'net';
 
+
 async function isRedisRunning(port = 6379): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = net.createConnection(port, '127.0.0.1');
@@ -37,7 +38,6 @@ async function startRedisServer() {
     console.error('❌ Failed to start Redis automatically:', err);
   }
 }
-
 
 async function bootstrap() {
   await startRedisServer();

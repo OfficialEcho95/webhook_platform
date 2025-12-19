@@ -4,7 +4,11 @@ import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RedisModule } from 'redis.module';
-import { WebhookModule } from '../src/modules/webhooks/webhook.module';
+import { WebhookModule } from '../modules/webhooks/webhook.module';
+import { APP_GUARD } from '@nestjs/core';
+import { AuthGuard } from '../modules/shared/guards/auth.guard';
+import { RolesGuard } from '../modules/shared/guards/roles.guard';
+import { TenantGuard } from '../modules/shared/guards/tenant.guard';
 
 @Module({
   imports: [
@@ -22,7 +26,7 @@ import { WebhookModule } from '../src/modules/webhooks/webhook.module';
         username: config.get<string>('DB_USERNAME'),
         password: config.get<string>('DB_PASSWORD'),
         database: config.get<string>('DB_NAME'),
-        entities: [],
+        autoLoadEntities: true,
         synchronize: false,
         logging: true
       })
@@ -31,6 +35,10 @@ import { WebhookModule } from '../src/modules/webhooks/webhook.module';
     WebhookModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService,
+    { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: TenantGuard },
+  ],
 })
 export class AppModule { }
