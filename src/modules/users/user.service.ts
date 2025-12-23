@@ -5,9 +5,9 @@ import { Repository } from 'typeorm';
 
 
 export class UserService {
-    constructor (
-        @InjectRepository(UserEntity) private  readonly userRepository: Repository<UserEntity>
-    ) {}
+    constructor(
+        @InjectRepository(UserEntity) private readonly userRepository: Repository<UserEntity>
+    ) { }
 
     findByEmail(email: string) {
         return this.userRepository.findOne({ where: { email } });
