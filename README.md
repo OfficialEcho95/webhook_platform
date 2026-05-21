@@ -18,7 +18,6 @@ The system is structured to support:
 
 ## 🏗️ Architecture
 
-```mermaid
 flowchart LR
 
 Client --> API[NestJS API Layer]
@@ -35,7 +34,7 @@ API --> RateLimit[Rate Limiter]
 
 ---
 
-## 🔁 Core System Flows
+🔁 Core System Flows
 
 1. Request Lifecycle
 Client sends request to API
