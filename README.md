@@ -20,20 +20,21 @@ The system is structured to support:
 
 ```mermaid
 flowchart LR
-    Client --> API[NestJS API Layer]
+    Client[Client Applications] --> API[NestJS API Layer]
 
-    API --> Auth[Authentication Layer]
-    Auth --> Services[Core Business Services]
+    API --> Auth[Auth Service (JWT)]
+    API --> Services[Business Logic Layer]
 
-    Services --> Queue[Redis Queue (BullMQ)]
-    Queue --> Workers[Background Workers]
+    Services --> Queue[Redis Queue - BullMQ]
+    Queue --> Workers[Async Workers]
 
-    Services --> DB[(PostgreSQL)]
+    Services --> DB[(PostgreSQL Database)]
     Workers --> DB
 
-    API --> RateLimit[Rate Limiting Layer]
+    API --> RateLimit[Rate Limiting Middleware]
 ```
 
+---
 🔁 Core System Flows
 
 1. Request Lifecycle  
