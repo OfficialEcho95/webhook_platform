@@ -16,7 +16,6 @@ The system is structured to support:
 
 ---
 
-
 ## 🏗️ Architecture
 
 ```mermaid
@@ -34,8 +33,6 @@ flowchart LR
 
     API --> RateLimit[Rate Limiting Layer]
 ```
-
----
 
 🔁 Core System Flows
 
