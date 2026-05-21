@@ -58,38 +58,38 @@ Workers consume jobs independently
 Retry strategy applied on failure
 Dead-letter queue handles persistent failures
 
-⚙️ Key Features
+⚙️# **Key Features**
 🔐 Authentication System
 JWT-based authentication
 Refresh token support
 Role-based access control (RBAC)
 
-📡 Webhook System
+📡 **Webhook System**
 Secure signature verification
 Idempotency handling
 Event persistence before processing
 
-⚡ Background Processing
+⚡ **Background Processing**
 Redis + BullMQ queue system
 Asynchronous job execution
 Retry + failure handling strategy
 
-🧱 System Reliability
+🧱 **System Reliability**
 Centralized error handling
 Structured logging strategy
 Graceful failure recovery
 
-🚦 API Protection
+🚦 **API Protection**
 Rate limiting per user/API key
 Stateless API design 
 Horizontal scaling ready
 
-🧠 Design Decisions
+🧠 **Design Decisions**
 Why event-driven architecture?
 
 To decouple request handling from heavy or unreliable operations, improving responsiveness and scalability.
 
-Why Redis + BullMQ?
+**Why Redis + BullMQ?**
 
 Provides durable job queues with retry mechanisms and distributed worker support.
 
@@ -97,7 +97,7 @@ Why modular NestJS design?
 
 Ensures separation of concerns, making the system maintainable and scalable as features grow.
 
-🧰 Tech Stack  
+🧰 **Tech Stack**  
 Node.js  
 NestJS  
 TypeScript  
@@ -106,33 +106,32 @@ Redis
 BullMQ  
 Docker  
 
-🚀 Getting Started  
+🚀 **Getting Started**  
 docker-compose up  
 npm install  
 npm run start:dev
 
-📁 Project Structure  
-src/
-  database/
-  main/
-  modules/
-    api-keys
-    auth/
-    dashboards/
-    deliveries/
-    events/
-    payments/
-    shared/
-      backgroung/
-        queues/
-        workers/
-    tenants/
-    users/
-    webhooks/
-    database/
+📁 **Project Structure**  
+src/  
+  database/  
+  main/  
+  modules/  
+    api-keys/  
+    auth/  
+    dashboards/  
+    deliveries/  
+    events/  
+    payments/  
+    shared/  
+      backgroung/  
+        queues/  
+        workers/  
+    tenants/  
+    users/  
+    webhooks/  
+    database/  
 
-📌 Future Improvements
-
+📌 **Future Improvements**
 Distributed tracing (request ID propagation)
 Metrics dashboard (Prometheus/Grafana) yet to be added
 Advanced multi-tenant isolation layer
