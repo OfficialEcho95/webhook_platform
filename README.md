@@ -22,16 +22,16 @@ The system is structured to support:
 flowchart LR
     Client[Client Applications] --> API[NestJS API Layer]
 
-    API --> Auth[Auth Service (JWT)]
+    API --> Auth[Auth Service JWT]
     API --> Services[Business Logic Layer]
 
-    Services --> Queue[Redis Queue - BullMQ]
+    Services --> Queue[Redis Queue BullMQ]
     Queue --> Workers[Async Workers]
 
     Services --> DB[(PostgreSQL Database)]
     Workers --> DB
 
-    API --> RateLimit[Rate Limiting Middleware]
+    API --> RateLimit[Rate Limiting Layer]
 ```
 
 ---
