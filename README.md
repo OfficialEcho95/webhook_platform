@@ -58,27 +58,33 @@ Jobs queued via BullMQ
 Workers consume jobs independently
 Retry strategy applied on failure
 Dead-letter queue handles persistent failures
+
 ⚙️ Key Features
 🔐 Authentication System
 JWT-based authentication
 Refresh token support
 Role-based access control (RBAC)
+
 📡 Webhook System
 Secure signature verification
 Idempotency handling
 Event persistence before processing
+
 ⚡ Background Processing
 Redis + BullMQ queue system
 Asynchronous job execution
 Retry + failure handling strategy
+
 🧱 System Reliability
 Centralized error handling
 Structured logging strategy
 Graceful failure recovery
+
 🚦 API Protection
 Rate limiting per user/API key
-Stateless API design
+Stateless API design 
 Horizontal scaling ready
+
 🧠 Design Decisions
 Why event-driven architecture?
 
@@ -100,10 +106,13 @@ PostgreSQL
 Redis
 BullMQ
 Docker
+
 🚀 Getting Started
+
 docker-compose up
 npm install
 npm run start:dev
+
 📁 Project Structure
 src/
   database/
@@ -123,6 +132,7 @@ src/
     users/
     webhooks/
     database/
+    
 📌 Future Improvements
 
 Distributed tracing (request ID propagation)
