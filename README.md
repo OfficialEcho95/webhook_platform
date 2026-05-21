@@ -28,7 +28,7 @@ flowchart LR
     Services --> Queue[Redis Queue BullMQ]
     Queue --> Workers[Async Workers]
 
-    Services --> DB[(PostgreSQL Database)]
+    Services --> DB[(MySQL Database)]
     Workers --> DB
 
     API --> RateLimit[Rate Limiting Layer]
