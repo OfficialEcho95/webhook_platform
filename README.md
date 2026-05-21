@@ -1,98 +1,131 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 🚀 Scalable SaaS Backend Platform
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A production-grade backend system designed for API-first SaaS applications, featuring authentication, webhook ingestion, background job processing, and distributed system patterns.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 📌 Overview
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+This project demonstrates a scalable backend architecture built for reliability and modularity in real-world SaaS environments. It simulates core infrastructure patterns used in modern backend systems including event-driven processing, queue-based workloads, and secure API design.
 
-## Project setup
+The system is structured to support:
+- High-throughput API requests
+- Asynchronous processing pipelines
+- External webhook integrations
+- Multi-tenant SaaS architecture patterns
 
-```bash
-$ npm install
-```
+---
 
-## Compile and run the project
+## 🏗️ Architecture
 
-```bash
-# development
-$ npm run start
+```mermaid
+flowchart LR
 
-# watch mode
-$ npm run start:dev
+Client --> API[NestJS API Layer]
+API --> Auth[Authentication Layer]
+Auth --> Services[Core Business Services]
 
-# production mode
-$ npm run start:prod
-```
+Services --> Queue[Redis Queue - BullMQ]
+Queue --> Workers[Background Workers]
 
-## Run tests
+Services --> DB[(PostgreSQL)]
+Workers --> DB
 
-```bash
-# unit tests
-$ npm run test
+API --> RateLimit[Rate Limiter]
 
-# e2e tests
-$ npm run test:e2e
+---
 
-# test coverage
-$ npm run test:cov
-```
+🔁 Core System Flows
 
-## Deployment
+1. Request Lifecycle
+Client sends request to API
+Request passes through authentication layer
+Rate limiting applied per user/API key
+Business logic executed in service layer
+If async task required → job queued
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+2. Webhook Processing Flow
+External service sends webhook event
+Signature verification performed
+Event persisted in database
+Job pushed to Redis queue
+Worker processes event asynchronously
+Result stored and status updated
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+3. Background Job Processing
+Jobs queued via BullMQ
+Workers consume jobs independently
+Retry strategy applied on failure
+Dead-letter queue handles persistent failures
+⚙️ Key Features
+🔐 Authentication System
+JWT-based authentication
+Refresh token support
+Role-based access control (RBAC)
+📡 Webhook System
+Secure signature verification
+Idempotency handling
+Event persistence before processing
+⚡ Background Processing
+Redis + BullMQ queue system
+Asynchronous job execution
+Retry + failure handling strategy
+🧱 System Reliability
+Centralized error handling
+Structured logging strategy
+Graceful failure recovery
+🚦 API Protection
+Rate limiting per user/API key
+Stateless API design
+Horizontal scaling ready
+🧠 Design Decisions
+Why event-driven architecture?
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+To decouple request handling from heavy or unreliable operations, improving responsiveness and scalability.
 
-## Resources
+Why Redis + BullMQ?
 
-Check out a few resources that may come in handy when working with NestJS:
+Provides durable job queues with retry mechanisms and distributed worker support.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+Why modular NestJS design?
 
-## Support
+Ensures separation of concerns, making the system maintainable and scalable as features grow.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+🧰 Tech Stack
+Node.js
+NestJS
+TypeScript
+PostgreSQL
+Redis
+BullMQ
+Docker
+🚀 Getting Started
+docker-compose up
+npm install
+npm run start:dev
+📁 Project Structure
+src/
+  database/
+  main/
+  modules/
+    api-keys
+    auth/
+    dashboards/
+    deliveries/
+    events/
+    payments/
+    shared/
+      backgroung/
+        queues/
+        workers/
+    tenants/
+    users/
+    webhooks/
+    database/
+📌 Future Improvements
 
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Distributed tracing (request ID propagation)
+Metrics dashboard (Prometheus/Grafana) yet to be added
+Advanced multi-tenant isolation layer
+Event sourcing for critical workflows

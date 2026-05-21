@@ -9,15 +9,24 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from '../modules/shared/guards/auth.guard';
 import { RolesGuard } from '../modules/shared/guards/roles.guard';
 import { TenantGuard } from '../modules/shared/guards/tenant.guard';
+import { AuthModule } from '../modules/auth/auth.module';
+import { TenantModule } from 'src/modules/tenants/tenant.module';
+import { UserModule } from 'src/modules/users/user.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    EventEmitterModule.forRoot({
+      wildcard: true, // Allow wildcard events like 'tenant.*'
+      delimiter: '.',
+    }), // Initializes the event system/bus
     RedisModule,
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
+      imports: [ConfigModule, AuthModule, TenantModule, UserModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         type: 'mysql',
@@ -37,7 +46,6 @@ import { TenantGuard } from '../modules/shared/guards/tenant.guard';
   controllers: [AppController],
   providers: [AppService,
     { provide: APP_GUARD, useClass: AuthGuard },
-    { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: TenantGuard },
   ],
 })

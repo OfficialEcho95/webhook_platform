@@ -10,5 +10,5 @@ export class LoginDto {
     password: string;
 
     @IsString()
-    currentTenantId: string; // tenant the user belongs to
+    currentTenantId: number | null; // tenant the user belongs to
 }

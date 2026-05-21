@@ -30,7 +30,7 @@ export class UserEntity {
   email: string;
 
   @Column({ unique: true })
-  phone: number;
+  phone: string;
 
   @Column()
   password: string;
@@ -46,8 +46,8 @@ export class UserEntity {
   @Column({ type: 'enum', enum: UserRole, default: 'customer' })
   role: UserRole;
 
-  @Column({ nullable: true })
-  currentTenantId?: string;
+  @Column({ type: 'int', nullable: true })
+  currentTenantId?: number | null; // tenant the user is currently active in
 
   @Column({ default: true })
   isActive: boolean;

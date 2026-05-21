@@ -15,16 +15,16 @@ export class CreateUserDto {
   @IsNotEmpty()
   email: string;
 
-  @IsNumber()
+  @IsString()
   @IsNotEmpty()
-  phone: number;
+  phone: string;
 
   @IsString()
   @IsNotEmpty()
   password: string;
 
-  @IsString()
-  currentTenantId: string; // tenant the user belongs to
+  // @IsString()
+  // currentTenantId: string; // tenant the user belongs to
 
   @IsEnum(UserRole)
   @IsOptional()

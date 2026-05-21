@@ -5,9 +5,11 @@ import { LoginDto } from "./dto/login.dto";
 import { CreateUserDto } from "../auth/dto/create-user.dto";
 import { VerifyEmailDto } from "./dto/verify-email.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
+import { Public } from "../shared/guards/roles.guard";
 
 
 @Controller('auth')
+@Public()
 export class AuthController {
     constructor(
         private readonly authService: AuthService,

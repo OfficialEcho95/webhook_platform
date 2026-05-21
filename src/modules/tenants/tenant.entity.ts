@@ -5,12 +5,14 @@ import {
   ManyToOne,
   ManyToMany,
   JoinTable,
+  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
   DeleteDateColumn,
   Index,
 } from 'typeorm';
-import { UserEntity } from '../../modules/users/user.entity';
+import { ApiKey } from '../api-keys/api-key.entity';
+import { UserEntity } from '../users/user.entity';
 import { v4 as uuidv4 } from 'uuid';
 
 export enum TenantPlan {
@@ -34,13 +36,13 @@ export class TenantEntity {
   @Index({ unique: true })
   name: string;
 
-  // Public UUID
+  // Public, non-guessable identifier (safe for URLs, APIs, etc.)
   @Column({ type: 'uuid', unique: true })
   uuid: string = uuidv4();
 
   @Column()
   @Index({ unique: true })
-  slug: string; // Used for subdomains/workspace URLs
+  slug: string;
 
   @Column({
     type: 'enum',
@@ -49,6 +51,16 @@ export class TenantEntity {
   })
   plan: TenantPlan;
 
+  @Column({ type: 'datetime', nullable: true })
+  subscriptionDate: Date | null;
+
+  @Column({ type: 'datetime', nullable: true })
+  subscriptionExpiry: Date | null;
+
+  @ManyToOne(() => ApiKey, (apiKey) => apiKey.tenantEntity,
+  { eager: true, cascade: true })
+  apiKeys: ApiKey[];
+
   @Column({
     type: 'enum',
     enum: TenantStatus,
@@ -56,27 +68,44 @@ export class TenantEntity {
   })
   status: TenantStatus;
 
-  /*
-  This is the single user who created or “owns” the tenant.
-  Usually, the owner can manage billing, invite/remove users, delete the tenant
-  ManyToOne because many tenants can have the same owner, but each tenant has only one owner.
-  */
-  @ManyToOne(() => UserEntity, (user) => user.ownedTenants, { eager: true })
+  /**
+   * Tenant owner
+   * - One user owns many tenants
+   * - Each tenant has exactly one owner
+   */
+  @ManyToOne(() => UserEntity, (user) => user.ownedTenants, {
+    eager: true,
+    onDelete: 'RESTRICT',
+  })
+  @JoinColumn({ name: 'ownerId' })
   owner: UserEntity;
 
-  /*
-  This is a list of all members of the tenant, including the owner
-  ManyToMany because a user can belong to multiple tenants, and each tenant has multiple users
-  */
-  @ManyToMany(() => UserEntity, (user) => user.tenants, { cascade: true })
-  @JoinTable()
+  @Column()
+  ownerId: number;
+
+  /**
+   * Tenant members (including the owner)
+   * - Users can belong to multiple tenants
+   * - Tenants can have multiple users
+   */
+  @ManyToMany(() => UserEntity, (user) => user.tenants)
+  @JoinTable({    name: 'tenant_users',
+    joinColumn: {
+      name: 'tenantId',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'userId',
+      referencedColumnName: 'id',
+    },
+  })
   users: UserEntity[];
 
   @Column({ nullable: true })
-  webhookSecret: string; // used for your platform's webhook signing
+  webhookSecret?: string;
 
   @Column({ type: 'json', nullable: true })
-  settings: Record<string, any>; // flexible configuration
+  settings?: Record<string, any>;
 
   @CreateDateColumn()
   createdAt: Date;

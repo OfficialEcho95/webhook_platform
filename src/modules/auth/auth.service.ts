@@ -9,6 +9,8 @@ import * as bcrypt from 'bcrypt';
 import { LoginDto } from "./dto/login.dto";
 import { UserService } from "../users/user.service";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
+import { QueueAuthentication } from "../shared/background_runners/queues/authentication.queue";
+
 
 @Injectable()
 export class AuthService {
@@ -17,6 +19,7 @@ export class AuthService {
         private readonly configService: ConfigService,
         private readonly jwtService: JwtService,
         private readonly userService: UserService,
+        private readonly queueAuthentication: QueueAuthentication
     ) { }
 
     async createUser(createUserDTO: CreateUserDto) {
@@ -39,6 +42,7 @@ export class AuthService {
         const verificationLink = `${frontendUrl}/verify-email?token=${token}`;
 
         // email sending logic would be ended here later
+        this.queueAuthentication.queueNewUserRegistration(savedUser.email, `Please verify your email by clicking on the following link: ${verificationLink}`);
 
         const { password, ...safeUser } = savedUser;
         return safeUser;
@@ -48,7 +52,7 @@ export class AuthService {
     async login(loginDTO: LoginDto) {
         const { login } = loginDTO;
         const isEmail = login.includes('@');
-        const user = isEmail ? await this.userService.findByEmail(login) : await this.userService.findByPhone(Number(login));
+        const user = isEmail ? await this.userService.findByEmail(login) : await this.userService.findByPhone((login));
 
         if (!user) {
             throw new NotFoundException('User not found');
@@ -62,6 +66,9 @@ export class AuthService {
 
         const { password: pwd, ...userWithoutPassword } = user;
 
+        //background job to update last login time can be added here later
+        this.queueAuthentication.successfulLoginNotification(user.email);   
+        
         return {
             user: userWithoutPassword,
             access_token: token
@@ -80,6 +87,8 @@ export class AuthService {
             }
             user.isVerified = true;
             await this.userRepository.save(user);
+
+            this.queueAuthentication.queueEmailVerification(user.email, `Your email has been successfully verified.`);
             return { message: 'Email verified successfully' };
         } catch (error) {
             throw new BadRequestException('Invalid or expired token');
@@ -102,6 +111,7 @@ export class AuthService {
 
             user.password = dto.newPassword;
             await this.userRepository.save(user);
+            this.queueAuthentication.queuePasswordReset(user.email, '');  
 
             return { message: 'Password successfully changed' };
         } catch {
