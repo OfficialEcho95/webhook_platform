@@ -35,7 +35,7 @@ API --> RateLimit[Rate Limiter]
 
 ---
 
-🔁 Core System Flows
+## 🔁 Core System Flows
 
 1. Request Lifecycle
 Client sends request to API
@@ -132,7 +132,7 @@ src/
     users/
     webhooks/
     database/
-    
+
 📌 Future Improvements
 
 Distributed tracing (request ID propagation)
