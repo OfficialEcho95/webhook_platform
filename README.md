@@ -97,21 +97,21 @@ Why modular NestJS design?
 
 Ensures separation of concerns, making the system maintainable and scalable as features grow.
 
-🧰 Tech Stack
-Node.js
-NestJS
-TypeScript
-PostgreSQL
-Redis
-BullMQ
-Docker
+🧰 Tech Stack  
+Node.js  
+NestJS  
+TypeScript  
+PostgreSQL  
+Redis  
+BullMQ  
+Docker  
 
-🚀 Getting Started
-docker-compose up
-npm install
+🚀 Getting Started  
+docker-compose up  
+npm install  
 npm run start:dev
 
-📁 Project Structure
+📁 Project Structure  
 src/
   database/
   main/
