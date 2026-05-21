@@ -16,21 +16,24 @@ The system is structured to support:
 
 ---
 
+
 ## 🏗️ Architecture
 
+```mermaid
 flowchart LR
+    Client --> API[NestJS API Layer]
 
-Client --> API[NestJS API Layer]
-API --> Auth[Authentication Layer]
-Auth --> Services[Core Business Services]
+    API --> Auth[Authentication Layer]
+    Auth --> Services[Core Business Services]
 
-Services --> Queue[Redis Queue - BullMQ]
-Queue --> Workers[Background Workers]
+    Services --> Queue[Redis Queue (BullMQ)]
+    Queue --> Workers[Background Workers]
 
-Services --> DB[(PostgreSQL)]
-Workers --> DB
+    Services --> DB[(PostgreSQL)]
+    Workers --> DB
 
-API --> RateLimit[Rate Limiter]
+    API --> RateLimit[Rate Limiting Layer]
+```
 
 ---
 
