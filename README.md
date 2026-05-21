@@ -130,8 +130,8 @@ src/
     webhooks/  
     database/  
 
-📌 **Future Improvements**
-Distributed tracing (request ID propagation)
-Metrics dashboard (Prometheus/Grafana) yet to be added
-Advanced multi-tenant isolation layer
-Event sourcing for critical workflows
+📌 **Future Improvements**  
+Distributed tracing (request ID propagation)  
+Metrics dashboard (Prometheus/Grafana) yet to be added  
+Advanced multi-tenant isolation layer  
+Event sourcing for critical workflows  
