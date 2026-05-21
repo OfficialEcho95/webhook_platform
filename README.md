@@ -107,7 +107,6 @@ BullMQ
 Docker
 
 🚀 Getting Started
-
 docker-compose up
 npm install
 npm run start:dev
