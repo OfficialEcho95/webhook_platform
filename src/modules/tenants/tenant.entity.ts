@@ -10,6 +10,7 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
   Index,
+  OneToMany,
 } from 'typeorm';
 import { ApiKey } from '../api-keys/api-key.entity';
 import { UserEntity } from '../users/user.entity';
@@ -57,8 +58,7 @@ export class TenantEntity {
   @Column({ type: 'datetime', nullable: true })
   subscriptionExpiry: Date | null;
 
-  @ManyToOne(() => ApiKey, (apiKey) => apiKey.tenantEntity,
-  { eager: true, cascade: true })
+  @OneToMany(() => ApiKey, (apiKey) => apiKey.tenantEntity,)
   apiKeys: ApiKey[];
 
   @Column({

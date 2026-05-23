@@ -9,22 +9,24 @@ export class ApiKey {
   @Column()
   tenantId: number;
 
-  @ManyToOne(() => TenantEntity, (tenant) => tenant.apiKeys, { onDelete: 'CASCADE' })
+  @ManyToOne(() => TenantEntity, (tenant) => tenant.apiKeys, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'tenantId' })
-  tenantEntity: TenantEntity;
+  tenantEntity!: TenantEntity;
 
   @Column({ unique: true })
-  key: string; // actual API key
+  key: string;
 
   @Column({ default: true })
   active: boolean;
 
   @Column({ nullable: true })
-  description: string;
+  description?: string;
 
   @CreateDateColumn()
   createdAt: Date;
 
-  @Column({ nullable: true })
-  revokedAt?: Date;
+  @Column({type: 'datetime', nullable: true })
+  revokedAt: Date | null;
 }

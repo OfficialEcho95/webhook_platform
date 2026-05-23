@@ -1,5 +1,5 @@
 import { TenantEntity } from "./tenant.entity";
-import { Injectable, NotFoundException, BadRequestException, Inject, ForbiddenException } from "@nestjs/common";
+import { Injectable, NotFoundException, BadRequestException, Inject, ForbiddenException, UnauthorizedException } from "@nestjs/common";
 import { Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { UserEntity } from "../users/user.entity";
@@ -7,7 +7,6 @@ import { TenantPlan, TenantStatus } from "./tenant.entity";
 import { CreateTenantDto } from "./dto/create-tenant.dto";
 import { TenantInvitationEntity } from "./tenantInvitation.entity";
 import { randomUUID } from 'crypto';
-import { PaystackWebhookHandler } from "../payment/service/paystack.webhook";
 import { EventService } from "../events/event.service";
 import { UserService } from "../users/user.service";
 import { EventEmitter2 } from "@nestjs/event-emitter";
@@ -256,10 +255,8 @@ export class TenantService {
         return { message: "Tenant plan successfully upgraded", updatedPlan };
     }
 
-    async downgradeTenantPlan(
-        tenantId: number,
-        newPlan: TenantPlan,
-    ): Promise<{ message: string; newPlan: TenantPlan }> {
+    async downgradeTenantPlan(tenantId: number, newPlan: TenantPlan):
+        Promise<{ message: string; newPlan: TenantPlan }> {
 
         const tenant = await this.tenantRepository.findOne({
             where: { id: tenantId },
@@ -280,9 +277,7 @@ export class TenantService {
             tenant.plan = TenantPlan.FREE;
 
             // revoke all keys
-            if (tenant.apiKeys?.length) {
-                await this.apikey.revokeApiKey(tenant.apiKeys);
-            }
+            await this.apikey.revokeTenantKeys(tenant.id);
 
             tenant.subscriptionDate = null;
             tenant.subscriptionExpiry = null;

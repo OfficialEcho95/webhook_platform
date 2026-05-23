@@ -1,50 +1,72 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { DeliveryService } from '../deliveries/delivery.service';
-import { DestinationService } from '../destinations/destination.service';
+// event-fanout.service.ts
+
+import { Injectable } from '@nestjs/common';
+
+import { InjectQueue } from '@nestjs/bullmq';
+
 import { Queue } from 'bullmq';
-import { RedisServer } from '../../../redisServer';
+
 import { EventEntity } from './event.entity';
+
+import { DestinationService } from '../destinations/destination.service';
+
+import { DeliveryService } from '../deliveries/delivery.service';
 
 @Injectable()
 export class EventFanoutService {
-  private readonly logger = new Logger(EventFanoutService.name);
-  private deliveryQueue: Queue;
-
   constructor(
-    private readonly deliveryService: DeliveryService,
     private readonly destinationService: DestinationService,
-    private readonly redisServer: RedisServer,
-  ) {
-    this.deliveryQueue = new Queue('webhook-delivery', {
-      connection: this.redisServer.getConnection(),
-    });
-  }
+    private readonly deliveryService: DeliveryService,
+    @InjectQueue('webhook-delivery') private readonly webhookQueue: Queue,
+  ) {}
 
-  /**
-   * Fan out an event to all destinations
-   */
   async fanout(event: EventEntity): Promise<void> {
-    // 1️⃣ Get all destinations for this tenant and event type
-    const destinations = await this.destinationService.findActiveForEvent(
-      event.tenantId,
-      event.eventType,
-    );
+    /**
+     * Find subscribed destinations
+     */
+    const destinations =
+      await this.destinationService.findActiveForEvent(
+        event.tenantId,
+        event.eventType,
+      );
 
     if (!destinations.length) {
-      this.logger.log(`No destinations configured for event ${event.id}`);
       return;
     }
 
-    // 2️⃣ Create delivery records and enqueue jobs
+    /**
+     * One delivery per destination
+     */
     for (const destination of destinations) {
-      const delivery = await this.deliveryService.create(event.id, destination.id);
+      /**
+       * Persist delivery first
+       */
+      const delivery = await this.deliveryService.create(
+        event.id,
+        destination.id,
+      );
 
-      await this.deliveryQueue.add('deliver-webhook', {
-        deliveryId: delivery.id,
-      });
+      /**
+       * Queue ONLY delivery ID
+       */
+      await this.webhookQueue.add(
+        'send-webhook',
+        {
+          deliveryId: delivery.id,
+        },
+        {
+          attempts: destination.maxRetries,
 
-      this.logger.log(
-        `Delivery ${delivery.id} created for event ${event.id} → ${destination.url}`,
+          backoff: {
+            type: 'fixed',
+            delay:
+              destination.retryDelaySeconds * 1000,
+          },
+
+          removeOnComplete: 1000,
+
+          removeOnFail: 5000,
+        },
       );
     }
   }

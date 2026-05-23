@@ -4,14 +4,10 @@ import { ApiKey } from './api-key.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomBytes } from 'crypto';
 import { RedisServer } from 'redisServer';
-import { TenantPlan } from '../tenants/tenant.entity';
+import { TenantEntity, TenantPlan } from '../tenants/tenant.entity';
 
 
-const PLAN_LIMITS = {
-  [TenantPlan.FREE]: 4,         // test/free limit
-  [TenantPlan.PRO]: 5000,       // Professional limit
-  [TenantPlan.ENTERPRISE]: -1,  // -1 represents "Unlimited"
-};
+
 
 /***
 * Bear in mind that the monitoring of the subscription duration to enforce key revocation
@@ -41,7 +37,7 @@ export class ApiKeyService {
     const key = this.apiKeyRepo.create({
       tenantId,
       key: hashedKey,
-      description: 'Test API Key (Limited to 4/day)',
+      description: 'Test API Key (Limited to 4 requests/day)',
       active: true,
     });
 
@@ -49,82 +45,91 @@ export class ApiKeyService {
     return { apiKey: savedKey, rawKey };
   }
 
+
   /**
-   * This is the method that guards all API requests. 
-   * It validates the key and checks the rate limit based on the tenant's plan.
+   *  This method creates a new API key for a premium registered tenant. 
    */
-  async validateAndCheckLimit(rawKey: string): Promise<ApiKey> {
-    const hashedKey = this.hashKey(rawKey);
-
-    // We MUST join the tenantEntity to see what plan they are on
-    const apiKey = await this.apiKeyRepo.findOne({
-      where: { key: hashedKey, active: true },
-      relations: ['tenantEntity'],
-    });
-
-    if (!apiKey) throw new UnauthorizedException('Invalid API Key');
-
-    const tenant = apiKey.tenantEntity;
-    const dailyLimit = PLAN_LIMITS[tenant.plan] || 0;
-
-    // If the plan is not unlimited (-1), check the Redis counter
-    if (dailyLimit !== -1) {
-      await this.checkRateLimit(apiKey.id, dailyLimit, tenant.plan);
-    }
-    return apiKey;
-  }
-
-  private async checkRateLimit(apiKeyId: number, limit: number, planName: string) {
-    const redis = this.redisServer.getConnection();
-    // Key format: ratelimit:2026-03-19:apikey:123
-    const today = new Date().toISOString().split('T')[0];
-    const redisKey = `ratelimit:${today}:apikey:${apiKeyId}`;
-
-    const currentUsage = await redis.incr(redisKey);
-
-    if (currentUsage === 1) {
-      await redis.expire(redisKey, 86400); // 24-hour TTL
-    }
-
-    if (currentUsage > limit) {
-      this.logger.warn(`Rate limit exceeded for API Key ${apiKeyId} (${planName} Plan)`);
-      throw new BadRequestException(
-        `Daily limit reached for ${planName} plan (${limit}/${limit} requests used). ` +
-        `Upgrade your plan for higher limits.`
-      );
-    }
-  }
-
-  async createApiKey(tenantId: number, description?: string): Promise<ApiKey> {
-    const key = randomBytes(32).toString('hex'); // 64-character key
+  async createApiKey(tenantId: number, description?: string): Promise<{ rawKey: string; apiKey: ApiKey }> {
+    const rawKey = `sk_live_${randomBytes(32).toString('hex')}`;
+    const hashedKey = this.hashKey(rawKey); // 64-character key
 
     const apiKey = this.apiKeyRepo.create({
       tenantId,
-      key,
+      key: hashedKey,
       description,
       active: true,
     });
 
-    await this.apiKeyRepo.save(apiKey);
-    this.logger.log(`API key created for tenant ${tenantId} ${apiKey.key}`);
+    const savedKey = await this.apiKeyRepo.save(apiKey);
+    this.logger.log(`API key created for tenant = ${tenantId} ${savedKey.key}`);
+    return { rawKey, apiKey: savedKey };
+  }
+
+  getPlan(tenant: TenantEntity): TenantPlan {
+    return tenant.plan;
+  }
+
+  assertTenantActive(apiKey: ApiKey) {
+    const tenant = apiKey.tenantEntity;
+
+    if (tenant.status !== 'active') {
+      throw new UnauthorizedException('Tenant is inactive');
+    }
+  }
+
+  /**
+   * validation happens in the api key guard
+   * rates are enforced in the rate interceptor 
+   */
+  async validateKey(rawKey: string): Promise<ApiKey> {
+    return this.resolveApiKey(rawKey);
+  }
+
+  private async resolveApiKey(rawKey: string): Promise<ApiKey> {
+    const hashedKey = this.hashKey(rawKey);
+
+    const apiKey = await this.apiKeyRepo.findOne({
+      where: {
+        key: hashedKey,
+        active: true,
+      },
+      relations: ['tenantEntity'],
+    });
+
+    if (!apiKey) {
+      throw new UnauthorizedException('Invalid API Key');
+    }
+
     return apiKey;
   }
 
-  async revokeApiKey(apiKeys: ApiKey[]){
-    if (apiKeys.length === 0) return;
+  async revokeApiKey(apiKeyId: number): Promise<void> {
+    const result = await this.apiKeyRepo.update(apiKeyId, {
+      active: false,
+      revokedAt: new Date(),
+    });
 
-    const ids = apiKeys.map(k => k.id);
-    await this.apiKeyRepo.update(ids, { active: false, revokedAt: new Date()})
-      await this.createTestAPIkey(apiKeys[0].tenantId);
+    // If no rows were affected, the API key was not found
+    if (!result.affected) {
+      throw new NotFoundException('API key not found');
+    }
+
+    this.logger.log(`Revoked API key: ${apiKeyId}`);
+  }
+
+  async revokeTenantKeys(tenantId: number): Promise<void> {
+    const result = await this.apiKeyRepo.update(
+      { tenantId, active: true },
+      {
+        active: false,
+        revokedAt: new Date(),
+      },
+    );
+
+    this.logger.warn(`Revoked all API keys for tenant ${tenantId}`);
   }
 
   async getTenantKeys(tenantId: number): Promise<ApiKey[]> {
     return this.apiKeyRepo.find({ where: { tenantId } });
-  }
-
-  async validateKey(key: string): Promise<ApiKey> {
-    const apiKey = await this.apiKeyRepo.findOne({ where: { key, active: true } });
-    if (!apiKey) throw new BadRequestException('Invalid or revoked API key');
-    return apiKey;
   }
 }
