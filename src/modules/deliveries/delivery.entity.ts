@@ -12,9 +12,11 @@ import { Destination } from '../destinations/destination.entity';
 
 export enum DeliveryStatus {
   PENDING = 'pending',
+  IN_PROGRESS = 'in_progress',
   SUCCESS = 'success',
-  FAILED = 'failed',
   RETRYING = 'retrying',
+  FAILED = 'failed',
+  DEAD_LETTER = 'dead_letter',
 }
 
 @Entity('deliveries')
@@ -28,7 +30,8 @@ export class Delivery {
   @Column()
   eventId: string;
 
-  @ManyToOne(() => EventEntity, {onDelete: 'CASCADE',}) event: EventEntity;
+  @ManyToOne(() => EventEntity, { onDelete: 'CASCADE', })
+  event: EventEntity;
 
   /* Destination */
 
@@ -54,6 +57,13 @@ export class Delivery {
 
   @Column({ type: 'timestamp', nullable: true })
   lastAttemptAt?: Date;
+
+  /** when delivery was permanently dead lettered */
+  @Column({ type: 'timestamp', nullable: true })
+  deadLetterAt?: Date;
+
+  @Column({ type: 'text', nullable: true })
+  deadLetterReason?: string;
 
   /* Response snapshot */
 

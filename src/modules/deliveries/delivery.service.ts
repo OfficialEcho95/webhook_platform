@@ -9,7 +9,7 @@ export class DeliveryService {
   constructor(
     @InjectRepository(Delivery)
     private readonly deliveryRepo: Repository<Delivery>,
-  ) {}
+  ) { }
 
   /**
    * Create a delivery for a given event → destination pair
@@ -43,14 +43,43 @@ export class DeliveryService {
     return delivery;
   }
 
+
+  async markInProgress(deliveryId: number): Promise<void> {
+    await this.deliveryRepo.update(
+      {
+        id: deliveryId,
+        status: DeliveryStatus.PENDING,
+      },
+      {
+        status: DeliveryStatus.IN_PROGRESS,
+        lastAttemptAt: new Date(),
+      },
+    );
+  }
+
   /**
-   * Mark an attempt result
+   * Mark a delivery as successful
    */
-  async recordAttempt(params: {
+  async markSuccess(params: {
     deliveryId: number;
-    success: boolean;
-    responseStatus?: number;
+    responseStatus: number;
     responseBody?: string;
+  }): Promise<Delivery> {
+    const delivery = await this.getById(params.deliveryId);
+
+    delivery.status = DeliveryStatus.SUCCESS;
+    delivery.responseStatus = params.responseStatus;
+    delivery.responseBody = params.responseBody;
+
+    return this.deliveryRepo.save(delivery);
+  }
+
+
+  /**
+   * Mark a delivery as failed
+   */
+  async markFailure(params: {
+    deliveryId: number;
     errorMessage?: string;
     destination: Destination;
   }): Promise<Delivery> {
@@ -58,21 +87,17 @@ export class DeliveryService {
 
     delivery.attemptCount += 1;
     delivery.lastAttemptAt = new Date();
-    delivery.responseStatus = params.responseStatus;
-    delivery.responseBody = params.responseBody;
     delivery.errorMessage = params.errorMessage;
-
-    if (params.success) {
-      delivery.status = DeliveryStatus.SUCCESS;
-      return this.deliveryRepo.save(delivery);
-    }
 
     const maxRetries = params.destination.maxRetries;
 
-    if (delivery.attemptCount <= maxRetries) {
-      delivery.status = DeliveryStatus.RETRYING;
+    if (delivery.attemptCount >= maxRetries) {
+      delivery.status = DeliveryStatus.DEAD_LETTER;
+      delivery.deadLetterAt = new Date();
+      delivery.deadLetterReason =
+        params.errorMessage ?? 'Max retries exceeded';
     } else {
-      delivery.status = DeliveryStatus.FAILED;
+      delivery.status = DeliveryStatus.RETRYING;
     }
 
     return this.deliveryRepo.save(delivery);
@@ -93,16 +118,14 @@ export class DeliveryService {
   }
 
   /**
-   * Manual override / admin use
+   * Mark a delivery as a dead letter used by admin / debug tools
    */
-  async markFailed(
-    deliveryId: number,
-    reason: string,
-  ): Promise<Delivery> {
+  async markDeadLetter(deliveryId: number, reason: string) {
     const delivery = await this.getById(deliveryId);
 
-    delivery.status = DeliveryStatus.FAILED;
-    delivery.errorMessage = reason;
+    delivery.status = DeliveryStatus.DEAD_LETTER;
+    delivery.deadLetterAt = new Date();
+    delivery.deadLetterReason = reason;
 
     return this.deliveryRepo.save(delivery);
   }

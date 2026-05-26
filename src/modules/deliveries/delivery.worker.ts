@@ -1,85 +1,108 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
-import axios, { AxiosResponse } from 'axios';
+import axios from 'axios';
 import { DeliveryService } from '../deliveries/delivery.service';
 import { Delivery } from '../deliveries/delivery.entity';
+import { EventFailureService } from '../events/replayEvent.service';
 
 @Injectable()
 export class DeliveryWorker extends WorkerHost {
   private readonly logger = new Logger(DeliveryWorker.name);
 
-  constructor(private readonly deliveryService: DeliveryService) {
+  constructor(
+    private readonly deliveryService: DeliveryService,
+    private readonly failureService: EventFailureService,
+  ) {
     super();
   }
 
-  /**
-   * This is the abstract method from WorkerHost
-   * Called automatically when a job is received
-   */
   async process(job: Job<{ deliveryId: number }>): Promise<void> {
     const { deliveryId } = job.data;
 
-    let delivery: Delivery;
+    const delivery = await this.deliveryService.getById(deliveryId);
+
+    const { destination, event } = delivery;
+
+    if (!destination || !event) {
+      this.logger.warn(
+        `Delivery ${deliveryId} missing event or destination`,
+      );
+      return;
+    }
 
     try {
-      delivery = await this.deliveryService.getById(deliveryId);
-      const { destination, event } = delivery;
+      /**
+       * 1. mark in progress
+       */
+      await this.deliveryService.markInProgress(deliveryId);
 
-      if (!destination || !event) {
-        this.logger.warn(`Delivery ${deliveryId} missing destination or event`);
-        return;
-      }
+      this.logger.log(
+        `Dispatching delivery ${deliveryId} → ${destination.url}`,
+      );
 
-      const payload = event.payload;
+      /**
+       * 2. execute webhook
+       */
+      const response = await axios.post(
+        destination.url,
+        {
+          event: event.eventType,
+          payload: event.payload,
+          timestamp: event.createdAt,
+        },
+        {
+          timeout: 10000,
+          headers: {
+            'Content-Type': 'application/json',
+            ...(destination.secret
+              ? { 'X-Signature': destination.secret }
+              : {}),
+          },
+        },
+      );
 
-      // Optional headers / signing
-      const headers = {
-        'Content-Type': 'application/json',
-        ...(destination.secret ? { 'X-Signature': destination.secret } : {}),
-      };
-
-      this.logger.log(`Sending delivery ${deliveryId} → ${destination.url}`);
-
-      let response: AxiosResponse;
-
-      try {
-        response = await axios.post(destination.url, payload, { headers, timeout: 10000 });
-      } catch (err: any) {
-        await this.deliveryService.recordAttempt({
-          deliveryId,
-          success: false,
-          errorMessage: err.message,
-          destination,
-        });
-        this.logger.error(`Delivery ${deliveryId} failed: ${err.message}`);
-        return;
-      }
-
-      await this.deliveryService.recordAttempt({
+      /**
+       * 3. mark success
+       */
+      await this.deliveryService.markSuccess({
         deliveryId,
-        success: response.status >= 200 && response.status < 300,
         responseStatus: response.status,
         responseBody: JSON.stringify(response.data),
+      });
+
+      this.logger.log(`Delivery ${deliveryId} succeeded`);
+    } catch (err: any) {
+      /**
+       * 4. mark delivery failure ONLY
+       * (retry logic stays inside DeliveryService + BullMQ)
+       */
+      await this.deliveryService.markFailure({
+        deliveryId,
+        errorMessage: err.message,
         destination,
       });
 
-      this.logger.log(`Delivery ${deliveryId} processed successfully`);
-    } catch (err: any) {
-      this.logger.error(`Error processing delivery ${deliveryId}: ${err.message}`);
+      /**
+        *record EVENT-level failure ONLY if final failure
+        * (i.e. if we've exhausted all retries for this destination, then we consider 
+        * the EVENT delivery as failed and record it in the event_failures table)
+       */
+      if (delivery.attemptCount >= destination.maxRetries) {
+        await this.failureService.recordFailure({
+          eventId: event.id,
+          tenantId: event.tenantId,
+          eventType: event.eventType,
+          payload: event.payload,
+          reason: err.message,
+        });
+      }
+
+      this.logger.error(
+        `Delivery ${deliveryId} failed: ${err.message}`,
+      );
+
+      throw err;
     }
-  }
-
-  // Optional lifecycle hooks
-  async onJobActive(job: Job): Promise<void> {
-    this.logger.debug(`Job ${job.id} is now active`);
-  }
-
-  async onJobCompleted(job: Job, result: any): Promise<void> {
-    this.logger.debug(`Job ${job.id} completed`);
-  }
-
-  async onJobFailed(job: Job, error: Error): Promise<void> {
-    this.logger.error(`Job ${job.id} failed: ${error.message}`);
   }
 }

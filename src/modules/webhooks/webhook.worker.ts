@@ -47,6 +47,9 @@ export class WebhookProcessor extends WorkerHost {
       type: event.eventType,
       createdAt: event.createdAt,
       data: event.payload,
+      actorId: event.actorId,
+      metadata: event.metadata,
+      tenantId: event.tenantId,
     };
 
     const body = JSON.stringify(payload);

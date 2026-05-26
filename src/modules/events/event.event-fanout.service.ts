@@ -18,7 +18,7 @@ export class EventFanoutService {
     private readonly destinationService: DestinationService,
     private readonly deliveryService: DeliveryService,
     @InjectQueue('webhook-delivery') private readonly webhookQueue: Queue,
-  ) {}
+  ) { }
 
   async fanout(event: EventEntity): Promise<void> {
     /**
@@ -37,37 +37,37 @@ export class EventFanoutService {
     /**
      * One delivery per destination
      */
-    for (const destination of destinations) {
-      /**
-       * Persist delivery first
-       */
-      const delivery = await this.deliveryService.create(
-        event.id,
-        destination.id,
-      );
+    await Promise.all(
+      destinations.map(async (destination) => {
+        const delivery =
+          await this.deliveryService.create(
+            event.id,
+            destination.id,
+          );
 
-      /**
-       * Queue ONLY delivery ID
-       */
-      await this.webhookQueue.add(
-        'send-webhook',
-        {
-          deliveryId: delivery.id,
-        },
-        {
-          attempts: destination.maxRetries,
-
-          backoff: {
-            type: 'fixed',
-            delay:
-              destination.retryDelaySeconds * 1000,
+        await this.webhookQueue.add(
+          'send-webhook',
+          {
+            deliveryId: delivery.id,
           },
+          {
+            jobId: `delivery:${delivery.id}`,
 
-          removeOnComplete: 1000,
+            attempts: destination.maxRetries,
 
-          removeOnFail: 5000,
-        },
-      );
-    }
+            backoff: {
+              type: 'fixed',
+              delay:
+                destination.retryDelaySeconds *
+                1000,
+            },
+
+            removeOnComplete: 1000,
+
+            removeOnFail: 5000,
+          },
+        );
+      }),
+    );
   }
 }

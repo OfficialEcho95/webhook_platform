@@ -13,6 +13,7 @@ import { EventEmitter2 } from "@nestjs/event-emitter";
 import { QueueTenant } from "../shared/background_runners/queues/tenant.queue";
 import { ApiKeyService } from "../api-keys/api-key.service";
 
+
 /* 
 * NTS: for complete atomicity use datasource transactions but for
 * now we will keep it simple and just use repository methods with the 
